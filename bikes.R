@@ -5,6 +5,7 @@ library(RColorBrewer)
 
 data <- read_csv("accidents.csv")
 omaha_data <- data %>% filter(CityName == "Omaha")
+names(omaha_data) <- c("accidentkey","year","date","bytype","latitude","longitude","accidentseverity","totalfatalities","totalinjuries","time","alcohol","weather","landusecode","county","city","population2000","population2010","STATEFP10","PLACEFP10","PLACENS10")
 
 vars <- c(
   "Total Injuries" = "TotalInjuries",
@@ -28,48 +29,52 @@ ui <- bootstrapPage(
                             c("2008", "2009", "2010", "2011", "2012", "2013", "2014")),
                 
                 # Type filter
-                selectInput("bytype", "Choose type: ",
-                            choices = c("All" = NULL,
-                                        "Bike" = "Cyclists",
-                                        "Pedestrian" = "Pedestrian")),
+                selectInput("bytype", "Choose type: ", choices = NULL),
                 
                 # Histogram 
                 plotOutput("histCentile", height = 200),
                 plotOutput("lineTrend", height = 140),
                
                 # Conditions filter 
-                selectInput("conditions", "Conditions:",
-                            choices = c("Rain", "Clear"))
+                selectInput("conditions", "Conditions:", choices = NULL),
+                
+                tags$p(tags$small(includeHTML("attr.html")))
                 
   )
 )
 
 server <- function(input, output, session) {
   
+  conditions_list <- omaha_data$weather
+  names(conditions_list) <- conditions_list
+  updateSelectInput(session, "conditions", choices = conditions_list)
+  
+  type_list <- omaha_data$bytype
+  names(type_list) <- type_list
+  updateSelectInput(session, "bytype", choices = type_list)
   
   palette_rev <- rev(brewer.pal(5, "YlOrRd"))
   
   colorpal <- reactive({
-    colorNumeric(palette_rev, omaha_data$AccidentSeverity_CodeFromNDOR)
+    colorNumeric(palette_rev, omaha_data$accidentseverity)
   })
   
   filteredData <- reactive({
-    #if(is.null(input$bytype)) {
-    #  return()
-    #}
-    
-    omaha_data %>% filter(AccidentYear == input$range)# %>%
+    omaha_data %>% filter(year == input$range,
+                          bytype == input$bytype,
+                          weather == input$conditions)# %>%
     #print(input$bytype)
-                   #filter(PedestrianOrPedalcyclist %in% input$bytype)
+                   #filter(bytype %in% input$bytype)
+    
   })
   
   output$map <- renderLeaflet({
     leaflet(omaha_data) %>% addProviderTiles(providers$CartoDB.Positron) %>% 
-      fitBounds(~min(Longitude), ~min(Latitude), ~max(Longitude), ~max(Latitude))
+      fitBounds(~min(longitude), ~min(latitude), ~max(longitude), ~max(latitude))
   })
   
   filteredSeverity <- reactive({
-    omaha_data %>% filter(AccidentYear == input$range)
+    omaha_data %>% filter(year == input$range)
   })
   
   observe({
@@ -80,28 +85,28 @@ server <- function(input, output, session) {
       clearControls() %>% 
       addCircleMarkers(radius = 6,
                        stroke = FALSE,
-                       fillColor = ~pal(AccidentSeverity_CodeFromNDOR),
+                       fillColor = ~pal(accidentseverity),
                        fillOpacity = 0.7,
-                       popup = ~paste("Severity: ", AccidentSeverity_CodeFromNDOR, 
+                       popup = ~paste("Severity: ", accidentseverity, 
                                       "<br/>",
-                                      "Injuries: ", TotalInjuries,
+                                      "Injuries: ", totalinjuries,
                                       "<br/>",
-                                      "Fatalities: ", TotalFatalities,
+                                      "Fatalities: ", totalfatalities,
                                       "<br/>",
-                                      "Type: ", PedestrianOrPedalcyclist,
+                                      "Type: ", bytype,
                                       "<br/>",
-                                      "Conditions: ", WeatherConditions,
+                                      "Conditions: ", weather,
                                       "<br/>",
-                                      "Alcohol involved: ", AlcoholInvolved)
+                                      "Alcohol involved: ", alcohol)
       ) %>% 
-      addLegend("bottomright", pal = pal, values = ~AccidentSeverity_CodeFromNDOR,
+      addLegend("bottomright", pal = pal, values = ~accidentseverity,
                 title = "Accident Severity",
                 opacity = 1)
   })
   
   output$histCentile <- renderPlot({
-    ggplot(filteredSeverity(), aes(x = AccidentSeverity_CodeFromNDOR)) +
-      geom_bar(stat = "count", aes(fill = PedestrianOrPedalcyclist)) +
+    ggplot(filteredSeverity(), aes(x = accidentseverity)) +
+      geom_bar(stat = "count", aes(fill = bytype)) +
       theme_minimal() +
       labs(title = paste("Accident Severity in", input$range)) +
       xlab("Accident Severity (1 = most severe)") +
@@ -109,10 +114,11 @@ server <- function(input, output, session) {
   })
   
   output$lineTrend <- renderPlot({
-    ggplot(omaha_data, aes(x = AccidentYear, color = PedestrianOrPedalcyclist)) +
+    ggplot(omaha_data, aes(x = year, color = bytype)) +
       geom_line(stat = "count") +
       theme(legend.title = element_blank()) +
-      labs(title = "Trend for All Years")
+      labs(title = "Trend for All Years") +
+      geom_vline(xintercept=as.numeric(input$range), linetype = 1)
   })
   
 }
