@@ -53,7 +53,7 @@ server <- function(input, output, session) {
   names(type_list) <- type_list
   updateSelectInput(session, "bytype", choices = type_list)
   
-  palette_rev <- rev(brewer.pal(5, "YlOrRd"))
+  palette_rev <- rev(brewer.pal(5, "YlGnBu"))
   
   colorpal <- reactive({
     colorNumeric(palette_rev, omaha_data$accidentseverity)
@@ -99,7 +99,7 @@ server <- function(input, output, session) {
                                       "<br/>",
                                       "Alcohol involved: ", alcohol)
       ) %>% 
-      addLegend("bottomright", pal = pal, values = ~accidentseverity,
+      addLegend("bottomleft", pal = pal, values = ~accidentseverity,
                 title = "Accident Severity",
                 opacity = 1)
   })
