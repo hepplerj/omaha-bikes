@@ -1,6 +1,6 @@
 # Omaha Bikes
 
-An R Shiny app for exploring pedestrian accidents in Omaha. Accident data provided by the Nebraska Department of Roads.
+An R Shiny app for exploring pedestrian accidents in Omaha. Accident data provided by the Nebraska Department of Roads and [Lacey Matney](https://drive.google.com/file/d/0B7GLnaXzLj85d1h6VGVfdXBUZ2M/view).
 
 Accident severity codes:
 
