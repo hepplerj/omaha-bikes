@@ -12,8 +12,6 @@ vars <- c(
   "Total Fatalities" = "TotalFatalities"
 )
 
-
-
 ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body { width: 100%; height: 100%"),
   tags$head(includeCSS("styles.css")),
@@ -26,7 +24,7 @@ ui <- bootstrapPage(
                 #            ),
                 # Year filter
                 selectInput("range", "Year:",
-                            c("2008", "2009", "2010", "2011", "2012", "2013", "2014")),
+                            c("All Years","2008", "2009", "2010", "2011", "2012", "2013", "2014")),
                 
                 # Type filter
                 selectInput("bytype", "Choose type: ", choices = NULL),
@@ -60,12 +58,13 @@ server <- function(input, output, session) {
   })
   
   filteredData <- reactive({
+    if ("All Years" %in% input$range) {
+      omaha_data  
+    } else {
     omaha_data %>% filter(year == input$range,
                           bytype == input$bytype,
-                          weather == input$conditions)# %>%
-    #print(input$bytype)
-                   #filter(bytype %in% input$bytype)
-    
+                          weather == input$conditions)
+    }
   })
   
   output$map <- renderLeaflet({
@@ -74,7 +73,11 @@ server <- function(input, output, session) {
   })
   
   filteredSeverity <- reactive({
-    omaha_data %>% filter(year == input$range)
+    if ("All Years" %in% input$range) {
+      omaha_data
+    } else {
+      omaha_data %>% filter(year == input$range)
+    }
   })
   
   observe({
